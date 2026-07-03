@@ -1,0 +1,14 @@
+{
+  "name": "claude-plugin-store-context",
+  "owner": {
+    "name": "mikesarafidis"
+  },
+  "description": "Internal Claude Code plugins for our team.",
+  "plugins": [
+    {
+      "name": "claude-plugin-store-context",
+      "source": "./plugins/claude-plugin-store-context",
+      "description": "Save/load shared, git-tracked feature context in a project's feature_context/ folder, prompted automatically at the start of every session."
+    }
+  ]
+}
