@@ -1,0 +1,8 @@
+{
+  "name": "claude-plugin-store-context",
+  "description": "Save and load shared, git-tracked Claude Code context for a feature, stored in a project's feature_context/ folder.",
+  "version": "1.0.0",
+  "author": {
+    "name": "mikesarafidis"
+  }
+}
