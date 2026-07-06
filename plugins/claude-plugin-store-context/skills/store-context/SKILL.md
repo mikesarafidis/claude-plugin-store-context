@@ -88,12 +88,34 @@ agreements — without re-deriving everything.
 Ask: **"Save to an existing feature, or start a new one?"**
 
 - **Existing** → list the subdirectories of `feature_context/` (each one is a
-  feature) and let the user pick. **Read that feature's existing files in full**
-  before writing anything — you need their current content to merge into, not
-  overwrite.
+  feature) and let the user pick, then **immediately load that feature's context
+  into this session** (Step 3.1) before doing anything else.
 - **New** → ask the user for the **exact folder name** to use. Don't auto-slugify or
   invent one — they may already have a naming convention from other features in the
   repo. Create `feature_context/<name>/`.
+
+### Step 3.1 — Load the selected feature's context into the session
+
+This happens the moment a feature is selected — whether that selection came from the
+automatic session-start flow or a manual invocation — and independently of whether
+anything gets written later. Loading is not a write-time implementation detail; it's
+the point of the skill: the session should immediately have the same working
+knowledge the previous session ended with.
+
+1. Read every file in that feature's folder in full (`README.md` and whichever of
+   `ARCHITECTURE.md`, `DB_CHANGES.md`, `OPEN_ISSUES.md`, `RUNBOOK.md`,
+   `WORKING_AGREEMENTS.md` exist).
+2. Treat their contents as active working context for the rest of the session — the
+   goal & constraints, design decisions and their reasoning, current status, and open
+   issues should inform everything you do from this point on, the same as if the
+   person who wrote them had just explained it all to you directly.
+3. Give the user a short confirmation of what was loaded — feature name, current
+   status, and anything from "Open issues" that's still outstanding — so they can
+   correct you immediately if something's stale or wrong, rather than finding out
+   later. Keep this brief; it's a confirmation, not a re-statement of every file.
+4. Keep these files in full in context (don't summarize-and-discard) for the rest of
+   the session, since Step 4's merge logic later needs their exact current content,
+   and you may need to refer back to specific decisions or open issues at any point.
 
 ## Step 4 — Write the context
 
