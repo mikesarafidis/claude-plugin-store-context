@@ -3,6 +3,14 @@
 Matches the structure already in use in this repo's `feature_context/` folder. Read
 this before writing any of these files for a feature for the first time.
 
+**Note:** everything below describes the *real* content of these files. When adding
+to an *existing* feature, don't write into these sections directly — append a
+pending-update block instead, per
+[../../shared/pending-update-format.md](../../shared/pending-update-format.md). These
+templates matter for two moments: (1) writing a brand-new feature's files for the
+first time, and (2) `merge-context` folding pending updates back into these same
+sections.
+
 ## README.md (always create/update)
 
 ```markdown
@@ -45,6 +53,12 @@ this before writing any of these files for a feature for the first time.
 
 <Shortest path to build/run/verify this feature locally. Link to RUNBOOK.md for
 detail if one exists.>
+
+## Pending updates
+
+<Only present between sessions that haven't been through merge-context yet. See
+../../shared/pending-update-format.md. merge-context removes this section once its
+contents are folded into the sections above.>
 ```
 
 ## ARCHITECTURE.md (only if there's real architecture to document)

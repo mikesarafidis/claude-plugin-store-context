@@ -8,7 +8,7 @@
     {
       "name": "claude-plugin-store-context",
       "source": "./plugins/claude-plugin-store-context",
-      "description": "Save/load shared, git-tracked feature context in a project's feature_context/ folder, prompted automatically at the start of every session."
+      "description": "Save/load shared, git-tracked feature context in a project's feature_context/ folder, prompted automatically at the start of every session. Includes a merge-context command to safely consolidate concurrent updates without git conflicts."
     }
   ]
 }

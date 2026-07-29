@@ -4,13 +4,15 @@ description: >
   Save and load shared, git-tracked Claude Code context for a feature, stored in the
   project's feature_context/ folder, so any teammate (or a fresh Claude session) can
   pick up a feature with the same working knowledge instead of re-deriving it. Part of
-  the claude-plugin-store-context plugin: invoked automatically once at the start of every
-  new session in any project where this plugin is enabled (its bundled SessionStart
-  hook injects a reminder to run it), asking whether to save/update context now. Also
-  invoke manually with /claude-plugin-store-context:store-context, or whenever the user
-  says things like "save context", "save session context", "store this session",
-  "load feature context", "continue this feature", "resume work on <feature>", or
-  mentions feature_context directly.
+  the claude-plugin-store-context plugin: invoked automatically once at the start of
+  every new session in any project where this plugin is enabled (its bundled
+  SessionStart hook injects a reminder to run it), asking whether to save/update
+  context now. Also invoke manually with /claude-plugin-store-context:store-context,
+  or whenever the user says things like "save context", "save session context",
+  "store this session", "load feature context", "continue this feature", "resume work
+  on <feature>", or mentions feature_context directly. Updates to existing features
+  are append-only (see the companion merge-context skill) so that concurrent commits
+  from different teammates never conflict.
 ---
 
 # store-context
@@ -20,9 +22,15 @@ of docs that let anyone (human or a fresh Claude session) resume a feature with 
 same context the previous session had — the *why* behind decisions, not just a log of
 what happened.
 
-This skill ships as part of the `claude-plugin-store-context` plugin. Once the plugin is
-installed, it works in every project automatically — nothing project-specific to set
-up, and nothing to commit into each individual repo.
+This skill ships as part of the `claude-plugin-store-context` plugin, alongside a
+companion `merge-context` skill. Once the plugin is installed, it works in every
+project automatically — nothing project-specific to set up, and nothing to commit
+into each individual repo.
+
+**Important:** updates to an existing feature are append-only, never in-place edits.
+See Step 4 and `../../shared/pending-update-format.md` before writing anything to an
+existing feature's files — this is what keeps concurrent commits from different
+teammates conflict-free in git.
 
 ## When this runs
 
@@ -30,8 +38,8 @@ up, and nothing to commit into each individual repo.
   is enabled. The plugin's bundled `SessionStart` hook injects a note telling you to
   run this flow before anything else. Only do this once — if the user says no, don't
   ask again later in the same session.
-- **Manually, any time**, via `/claude-plugin-store-context:store-context`. This is how
-  the user re-opens the flow after having said no earlier, or wants to save
+- **Manually, any time**, via `/claude-plugin-store-context:store-context`. This is
+  how the user re-opens the flow after having said no earlier, or wants to save
   mid-session.
 
 ## Step 1 — Ask permission
@@ -75,7 +83,9 @@ agreements — without re-deriving everything.
 
 - **One subdirectory per feature**, named after the feature.
 - Each feature folder is self-contained. Start with its `README.md`.
-- Keep these docs updated as the feature evolves — treat them like code.
+- Updates to an *existing* feature are appended as pending-update blocks, never
+  edited in place — see `merge-context` for how those get folded in. This table is
+  only refreshed by `merge-context`, not by regular saves.
 
 ## Features
 
@@ -104,18 +114,18 @@ knowledge the previous session ended with.
 
 1. Read every file in that feature's folder in full (`README.md` and whichever of
    `ARCHITECTURE.md`, `DB_CHANGES.md`, `OPEN_ISSUES.md`, `RUNBOOK.md`,
-   `WORKING_AGREEMENTS.md` exist).
+   `WORKING_AGREEMENTS.md` exist) — **including any `## Pending updates` sections**,
+   since those may contain the most recent information even though they haven't been
+   merged into the main prose yet.
 2. Treat their contents as active working context for the rest of the session — the
    goal & constraints, design decisions and their reasoning, current status, and open
    issues should inform everything you do from this point on, the same as if the
    person who wrote them had just explained it all to you directly.
 3. Give the user a short confirmation of what was loaded — feature name, current
-   status, and anything from "Open issues" that's still outstanding — so they can
-   correct you immediately if something's stale or wrong, rather than finding out
-   later. Keep this brief; it's a confirmation, not a re-statement of every file.
-4. Keep these files in full in context (don't summarize-and-discard) for the rest of
-   the session, since Step 4's merge logic later needs their exact current content,
-   and you may need to refer back to specific decisions or open issues at any point.
+   status, and anything from "Open issues" that's still outstanding (including
+   unmerged pending updates, if any — mention that a `merge-context` run is pending)
+   — so they can correct you immediately if something's stale or wrong.
+4. Keep these files in full in context for the rest of the session.
 
 ## Step 4 — Write the context
 
@@ -124,41 +134,39 @@ have **equivalent working knowledge** to where this session left off — the act
 reasoning behind decisions, the current state, how to run things, and what's still
 open. Not a changelog; a briefing.
 
-**Always write/update:**
-- `README.md` — goal & constraints, key design decisions (and *why*), current status,
-  quickstart. This is the entry point; everything else is optional supporting detail.
+### New feature: write real files directly
 
-**Write/update only if actually relevant to this feature:**
-- `ARCHITECTURE.md` — components involved, with exact file paths and current state
-- `DB_CHANGES.md` — DB tables/columns the feature reads or writes
-- `OPEN_ISSUES.md` — diagnosis of current problems and what's left to do
-- `RUNBOOK.md` — how to build, run, test, or operate the feature
-- `WORKING_AGREEMENTS.md` — approval workflows, build quirks, or team conventions
-  specific to this feature
+There's no existing content to conflict with, so write real, final content straight
+into the real sections:
+
+- `README.md` (always) — goal & constraints, key design decisions (and *why*),
+  current status, quickstart.
+- Only as relevant: `ARCHITECTURE.md`, `DB_CHANGES.md`, `OPEN_ISSUES.md`,
+  `RUNBOOK.md`, `WORKING_AGREEMENTS.md`.
 
 Don't create a file just to have the full set — an `ARCHITECTURE.md` with nothing
-architectural to say is worse than no file at all. **Read
-[reference/feature-doc-templates.md](reference/feature-doc-templates.md) before
-writing any of these for the first time** — it has the section-by-section template
-and guidance on when each file earns its place.
+architectural to say is worse than no file at all. Read
+[reference/feature-doc-templates.md](reference/feature-doc-templates.md) for the
+section-by-section template before writing any of these for the first time.
 
-### Updating an existing feature: merge, don't overwrite
+### Existing feature: append-only, never edit in place
 
-1. Read each existing file fully first.
-2. Update only the sections that actually changed this session (status, new
-   decisions, newly-open issues, etc.).
-3. Leave everything else untouched — don't rewrite prose that's still accurate just
-   to rephrase it.
-4. Add to "Current status" rather than replacing it wholesale, so progress stays
-   visible over time.
-5. If a decision from this session reverses or invalidates an earlier one, keep the
-   old entry and note that it changed and why, rather than silently deleting it —
-   that reasoning is often exactly what the next person needs.
+**This is the important part.** Never edit an existing feature's existing prose
+directly — even for a small change. Instead, follow
+[../../shared/pending-update-format.md](../../shared/pending-update-format.md)
+exactly: append one uniquely-`id`-tagged `PENDING-UPDATE` block, under a
+`## Pending updates` heading at the very end of the relevant file(s), describing what
+changed this session. Do this for `README.md` always, and for any other file where
+something relevant changed.
 
-### Update the root index
+This is what keeps two teammates' commits to the same feature from conflicting in
+git — as long as every write is a pure addition at the end of the file, there's
+nothing for git to conflict over. Read the shared format doc for the exact block
+syntax and id-generation command before writing anything.
 
-After writing a feature's files, update `feature_context/README.md`'s feature table:
-add a row for a new feature, or update the status cell for an existing one.
+Do **not** update the root `feature_context/README.md` status table here — that's
+`merge-context`'s job, done once the pending updates are actually folded in, so
+regular saves never touch that shared file either.
 
 ## What this skill does NOT do
 
@@ -167,3 +175,5 @@ add a row for a new feature, or update the status cell for an existing one.
 - **It doesn't re-prompt mid-session.** The "do you want to save?" question is asked
   once, at session start. After that, saving again requires the user to explicitly
   invoke the skill.
+- **It doesn't merge or clean up pending updates.** That's the companion
+  `merge-context` skill's job — this skill only ever appends.
